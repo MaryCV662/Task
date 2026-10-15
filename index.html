@@ -7,7 +7,7 @@
 <link rel="manifest" href="/manifest.json">
 <link rel="icon" href="/icon-192.png">
 <link rel="apple-touch-icon" href="/icon-192.png">
-<meta name="theme-color" content="#000000">
+<meta name="theme-color" content="#0E1117">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tasks">
@@ -16,21 +16,22 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4"></script>
 <style>
-/* Black task tracker: quick-add bar, counts strip, then a grouped list or a three-column board; one column on phones. */
+/* Navy task tracker: quick-add bar, counts strip, project pills, then a grouped list or a three-column board; each project has its own color. */
 :root {
-  --bg: #000000;
-  --surface: #0C0C0C;
-  --raised: #151515;
-  --ink: #F2F2F0;
-  --muted: #8E8E8A;
-  --line: #242424;
+  --bg: #0E1117;
+  --surface: #161B24;
+  --raised: #1C2230;
+  --ink: #E8EAF0;
+  --muted: #8A92A5;
+  --line: #262D3B;
   --accent: #9DB4FF;
-  --accent-soft: #141B33;
+  --accent-soft: #1A2440;
   --done: #43D9A0;
   --done-soft: #0E2A20;
-  --late: #FF7A6B;
-  --late-soft: #2E1411;
-  --high: #FF7A6B;
+  --late: #FF8A7A;
+  --late-soft: #33181A;
+  --high: #FF8A7A;
+  --pc: #3A4252;
   --normal: #F5C451;
   --low: #6F7A8A;
   --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
@@ -105,7 +106,7 @@ form.quick .title { font-size: 1rem; }
 .group-head .count { font-family: var(--font-num); font-size: 0.8rem; color: var(--muted); }
 .group.overdue h2 { color: var(--late); }
 .rows { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; }
-.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 11px 14px; border-bottom: 1px solid var(--line); }
+.row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 11px 14px 11px 12px; border-bottom: 1px solid var(--line); border-left: 4px solid var(--pc); }
 .row:last-child { border-bottom: 0; }
 .row:hover { background: var(--raised); }
 .row .main { min-width: 0; cursor: pointer; border: 0; background: none; text-align: left; padding: 0; display: grid; gap: 3px; }
@@ -118,6 +119,14 @@ form.quick .title { font-size: 1rem; }
 .chip.due.late { color: var(--late); background: var(--late-soft); border-color: transparent; }
 .chip.due.today { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
 .chip.doing { color: var(--accent); border-color: var(--accent-soft); }
+.chip.proj { background: var(--pc-soft); color: var(--pc-ink); border-color: transparent; }
+.pills { display: flex; gap: 6px; flex-wrap: wrap; }
+.pill { border: 1px solid transparent; background: var(--pc-soft, var(--raised)); color: var(--pc-ink, var(--muted)); border-radius: 999px; padding: 5px 13px; font-size: 0.85rem; font-weight: 600; display: inline-flex; align-items: center; gap: 7px; }
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--pc); }
+.pill.all::before { display: none; }
+.pill:hover { border-color: var(--pc, var(--muted)); }
+.pill[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.pill .n { font-family: var(--font-num); font-weight: 400; font-size: 0.78rem; opacity: .75; }
 .pri { display: inline-flex; align-items: center; gap: 5px; font-size: 0.75rem; color: var(--muted); }
 .pri::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--normal); }
 .pri.high::before { background: var(--high); }
@@ -139,7 +148,7 @@ form.quick .title { font-size: 1rem; }
 .col.over { border-color: var(--accent); background: var(--accent-soft); }
 .col-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 2px 4px; }
 .col-head .count { font-family: var(--font-num); font-size: 0.8rem; color: var(--muted); }
-.card { background: var(--raised); border: 1px solid var(--line); border-radius: 8px; padding: 10px 12px; display: grid; gap: 6px; cursor: grab; }
+.card { background: var(--raised); border: 1px solid var(--line); border-left: 4px solid var(--pc); border-radius: 0; padding: 10px 12px; display: grid; gap: 6px; cursor: grab; }
 .card:hover { border-color: #3a3a3a; }
 .card.dragging { opacity: 0.4; }
 .card .t { font-weight: 600; overflow-wrap: anywhere; }
@@ -195,7 +204,6 @@ dialog textarea { resize: vertical; min-height: 80px; }
       <button type="button" data-view="board" aria-pressed="false">Board</button>
     </div>
     <input class="field search" id="search" type="search" placeholder="Search tasks" aria-label="Search tasks">
-    <select class="field" id="f-project" aria-label="Filter by project"></select>
     <select class="field" id="f-pri" aria-label="Filter by priority">
       <option value="">Any priority</option>
       <option value="high">High</option>
@@ -204,6 +212,8 @@ dialog textarea { resize: vertical; min-height: 80px; }
     </select>
     <label class="check-label" id="show-done-wrap"><input type="checkbox" id="show-done"> Show completed</label>
   </div>
+
+  <div class="pills" id="pills" role="group" aria-label="Filter by project"></div>
 
   <main id="view"></main>
 </div>
@@ -420,6 +430,36 @@ dialog textarea { resize: vertical; min-height: 80px; }
     if (PRI_RANK[a.priority] !== PRI_RANK[b.priority]) return PRI_RANK[a.priority] - PRI_RANK[b.priority];
     return a.createdAt - b.createdAt;
   }
+  // Each project gets its preferred color from its name; if that color is taken, the next free one.
+  // Older projects claim first, so colors stay put as new projects are added and match on every device.
+  var PROJECT_COLORS = [
+    ["#A98BFF", "#2A1F4A", "#C9B8FF"], ["#4FD1A0", "#123528", "#8FE3BE"], ["#F5A54A", "#3A2410", "#FFC98A"],
+    ["#FF7EB6", "#3D1628", "#FFB3D3"], ["#5EC8F2", "#0F2E3D", "#A6E2F9"], ["#FF8A6B", "#3B1A12", "#FFBCA8"],
+    ["#E58CF0", "#3A1640", "#F3BDF9"], ["#7FA2FF", "#18234A", "#B7CBFF"]
+  ];
+  var colorMap = {};
+  function assignColors() {
+    var first = {};
+    state.tasks.forEach(function (t) { if (t.project && !(first[t.project] <= t.createdAt)) first[t.project] = t.createdAt; });
+    var names = Object.keys(first).sort(function (a, b) { return first[a] - first[b] || a.localeCompare(b); });
+    var used = {}, n = PROJECT_COLORS.length;
+    colorMap = {};
+    names.forEach(function (name, k) {
+      var h = 0;
+      for (var i = 0; i < name.length; i++) h = (h * 31 + name.toLowerCase().charCodeAt(i)) >>> 0;
+      var idx = h % n;
+      if (k < n) while (used[idx]) idx = (idx + 1) % n;
+      used[idx] = true;
+      colorMap[name] = idx;
+    });
+  }
+  function projectColor(name) { return PROJECT_COLORS[colorMap[name] != null ? colorMap[name] : 0]; }
+  function paint(node, name) {
+    if (!name) return node;
+    var c = projectColor(name);
+    node.style.setProperty("--pc", c[0]); node.style.setProperty("--pc-soft", c[1]); node.style.setProperty("--pc-ink", c[2]);
+    return node;
+  }
   function projects() {
     var s = {}; state.tasks.forEach(function (t) { if (t.project) s[t.project] = 1; });
     return Object.keys(s).sort(function (a, b) { return a.localeCompare(b); });
@@ -460,11 +500,19 @@ dialog textarea { resize: vertical; min-height: 80px; }
   }
 
   function renderFilters() {
-    var list = projects(), sel = $("f-project");
+    var list = projects();
     if (state.project && list.indexOf(state.project) < 0) state.project = "";
-    sel.replaceChildren(el("option", { value: "", text: "All projects" }));
-    list.forEach(function (p) { sel.append(el("option", { value: p, text: p })); });
-    sel.value = state.project;
+    var counts = {}, open = 0;
+    state.tasks.forEach(function (t) { if (t.status !== "done") { open++; counts[t.project] = (counts[t.project] || 0) + 1; } });
+    function pill(value, label, n) {
+      var b = el("button", { type: "button", class: "pill" + (value ? "" : " all"), "aria-pressed": String(state.project === value),
+        onclick: function () { state.project = state.project === value && value ? "" : value; render(); } },
+        el("span", { text: label }), n ? el("span", { class: "n", text: String(n) }) : null);
+      if (value) paint(b, value);
+      return b;
+    }
+    $("pills").replaceChildren.apply($("pills"), [pill("", "All", open)].concat(list.map(function (p) { return pill(p, p, counts[p]); })));
+    $("pills").hidden = !list.length;
     $("projects").replaceChildren.apply($("projects"), list.map(function (p) { return el("option", { value: p }); }));
     document.querySelectorAll(".seg button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.view === state.view)); });
     $("show-done-wrap").hidden = state.view !== "list";
@@ -476,7 +524,7 @@ dialog textarea { resize: vertical; min-height: 80px; }
       var d = dayDiff(t.due), cls = t.status === "done" ? "" : d < 0 ? " late" : d === 0 ? " today" : "";
       m.append(el("span", { class: "chip due" + cls, text: dueLabel(t.due) }));
     }
-    if (t.project) m.append(el("span", { class: "chip", text: t.project }));
+    if (t.project) m.append(paint(el("span", { class: "chip proj", text: t.project }), t.project));
     if (opts && opts.status && t.status === "doing") m.append(el("span", { class: "chip doing", text: "In progress" }));
     if (t.priority !== "normal") m.append(el("span", { class: "pri " + t.priority, text: t.priority === "high" ? "High" : "Low" }));
     return m;
@@ -484,7 +532,7 @@ dialog textarea { resize: vertical; min-height: 80px; }
 
   function renderRow(t) {
     var done = t.status === "done";
-    return el("div", { class: "row" + (done ? " is-done" : "") },
+    return paint(el("div", { class: "row" + (done ? " is-done" : "") },
       el("button", { type: "button", class: "tick" + (done ? " on" : ""), "aria-label": done ? "Mark not done" : "Mark done", onclick: function () { toggleDone(t.id); } }),
       el("button", { type: "button", class: "main", onclick: function () { openEditor(t.id); } },
         el("span", { class: "t", text: t.title }),
@@ -492,7 +540,7 @@ dialog textarea { resize: vertical; min-height: 80px; }
         metaFor(t, { status: true })),
       el("div", { class: "row-actions" },
         el("button", { type: "button", class: "icon-btn rm", "aria-label": "Delete task", title: "Delete", text: "✕", onclick: function () { deleteTask(t.id); } }))
-    );
+    ), t.project);
   }
 
   function renderList(tasks) {
@@ -551,7 +599,7 @@ dialog textarea { resize: vertical; min-height: 80px; }
             el("div", { class: "move" },
               si > 0 ? el("button", { type: "button", class: "icon-btn", title: "Move to " + STATUSES[si - 1][1], "aria-label": "Move to " + STATUSES[si - 1][1], text: "←", onclick: function () { updateTask(t.id, { status: STATUSES[si - 1][0] }); } }) : null,
               si < 2 ? el("button", { type: "button", class: "icon-btn", title: "Move to " + STATUSES[si + 1][1], "aria-label": "Move to " + STATUSES[si + 1][1], text: "→", onclick: function () { updateTask(t.id, { status: STATUSES[si + 1][0] }); } }) : null)));
-        col.append(card);
+        col.append(paint(card, t.project));
       });
       if (!items.length) col.append(el("div", { class: "col-empty", text: "Drop tasks here" }));
       board.append(col);
@@ -560,6 +608,7 @@ dialog textarea { resize: vertical; min-height: 80px; }
   }
 
   function render() {
+    assignColors();
     renderSync();
     renderSummary();
     renderFilters();
@@ -600,7 +649,6 @@ dialog textarea { resize: vertical; min-height: 80px; }
     b.addEventListener("click", function () { state.view = b.dataset.view; savePrefs(); render(); });
   });
   $("search").addEventListener("input", function (e) { state.search = e.target.value; render(); });
-  $("f-project").addEventListener("change", function (e) { state.project = e.target.value; render(); });
   $("f-pri").addEventListener("change", function (e) { state.priority = e.target.value; render(); });
   $("show-done").addEventListener("change", function (e) { state.showDone = e.target.checked; savePrefs(); render(); });
   document.addEventListener("keydown", function (e) {
