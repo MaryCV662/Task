@@ -30,3 +30,40 @@ begin
     alter publication supabase_realtime add table tasks;
   end if;
 end $$;
+
+-- ---------- Month end ----------
+-- One row per client; clients carry over to every month.
+create table if not exists close_clients (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  created_at timestamptz not null default now()
+);
+
+-- One row per client per month that's been closed. Unticking deletes the row.
+create table if not exists close_done (
+  client_id uuid not null references close_clients(id) on delete cascade,
+  month text not null check (month ~ '^\d{4}-\d{2}$'),
+  done_at timestamptz not null default now(),
+  primary key (client_id, month)
+);
+
+alter table close_clients enable row level security;
+alter table close_done enable row level security;
+
+drop policy if exists "allow all close_clients" on close_clients;
+create policy "allow all close_clients" on close_clients for all using (true) with check (true);
+
+drop policy if exists "allow all close_done" on close_done;
+create policy "allow all close_done" on close_done for all using (true) with check (true);
+
+do $$
+begin
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'close_clients') then
+    alter publication supabase_realtime add table close_clients;
+  end if;
+  if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'close_done') then
+    alter publication supabase_realtime add table close_done;
+  end if;
+end $$;
+
+notify pgrst, 'reload schema';

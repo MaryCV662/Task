@@ -168,6 +168,29 @@ dialog textarea { resize: vertical; min-height: 80px; }
 .dlg-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .dlg-foot .right { display: flex; gap: 8px; }
 
+/* top tabs */
+.tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.tabs button { border: 0; background: transparent; color: var(--muted); font-weight: 600; padding: 10px 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
+.tabs button:hover { color: var(--ink); }
+.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+.tab { display: grid; gap: 20px; }
+
+/* month end */
+.close-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
+.month-nav { display: flex; align-items: center; gap: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 999px; padding: 4px; }
+.month-nav button { border: 0; background: transparent; width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; line-height: 1; }
+.month-nav button:hover { background: var(--raised); }
+.month-nav strong { font-family: var(--font-display); font-weight: 600; min-width: 9.5em; text-align: center; }
+.progress { display: grid; gap: 6px; flex: 1 1 220px; max-width: 360px; }
+.progress .txt { display: flex; justify-content: space-between; font-size: 0.88rem; color: var(--muted); }
+.progress .txt b { color: var(--ink); font-family: var(--font-num); font-weight: 500; }
+.progress .track { height: 8px; background: var(--raised); border-radius: 99px; overflow: hidden; }
+.progress .track i { display: block; height: 100%; background: var(--done); border-radius: 99px; transition: width .3s ease; }
+form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.row.client.closed { --pc: var(--done); }
+.row.client .st { font-size: 0.82rem; color: var(--muted); }
+.row.client.closed .st { color: var(--done); }
+
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: 0.9rem; display: flex; gap: 14px; align-items: center; box-shadow: 0 8px 30px rgba(0,0,0,.5); z-index: 10; max-width: calc(100vw - 32px); }
 .toast button { border: 0; background: none; color: var(--bg); font-weight: 700; text-decoration: underline; padding: 0; }
 </style>
@@ -181,6 +204,12 @@ dialog textarea { resize: vertical; min-height: 80px; }
     </div>
   </header>
 
+  <nav class="tabs" role="tablist" aria-label="Sections">
+    <button type="button" role="tab" data-tab="tasks" aria-selected="true">Tasks</button>
+    <button type="button" role="tab" data-tab="close" aria-selected="false">Month end</button>
+  </nav>
+
+  <div class="tab" id="tasks-tab">
   <div class="notice" id="notice" hidden></div>
 
   <form class="quick" id="quick" autocomplete="off">
@@ -216,6 +245,27 @@ dialog textarea { resize: vertical; min-height: 80px; }
   <div class="pills" id="pills" role="group" aria-label="Filter by project"></div>
 
   <main id="view"></main>
+  </div>
+
+  <section class="tab" id="close-tab" hidden>
+    <div class="notice" id="close-notice" hidden></div>
+    <div class="close-head">
+      <div class="month-nav">
+        <button type="button" id="m-prev" aria-label="Previous month">‹</button>
+        <strong id="m-label"></strong>
+        <button type="button" id="m-next" aria-label="Next month">›</button>
+      </div>
+      <div class="progress">
+        <div class="txt"><span><b id="c-done">0</b> of <b id="c-total">0</b> clients closed</span><span id="c-pct"></span></div>
+        <div class="track"><i id="c-bar" style="width:0%"></i></div>
+      </div>
+    </div>
+    <form class="add-client" id="add-client" autocomplete="off">
+      <input class="field" id="c-name" placeholder="Add a client" aria-label="Client name" required maxlength="120">
+      <button class="primary" type="submit">Add client</button>
+    </form>
+    <div id="close-list"></div>
+  </section>
 </div>
 
 <dialog id="dlg">
@@ -262,6 +312,7 @@ dialog textarea { resize: vertical; min-height: 80px; }
     mode: "cloud",        // "cloud" (Supabase) or "local" (this browser only, until setup.sql is run)
     loaded: false,
     tasks: [],            // {id, title, notes, status, priority, due, project, createdAt, completedAt}
+    tab: "tasks",       // "tasks" or "close" (month end)
     view: "list",
     search: "",
     project: "",
@@ -644,7 +695,7 @@ dialog textarea { resize: vertical; min-height: 80px; }
     $("q-title").value = ""; $("q-due").value = ""; $("q-pri").value = "normal";
     $("q-title").focus();
   });
-  function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify({ view: state.view, showDone: state.showDone })); } catch (e) {} }
+  function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify({ view: state.view, showDone: state.showDone, tab: state.tab })); } catch (e) {} }
   document.querySelectorAll(".seg button").forEach(function (b) {
     b.addEventListener("click", function () { state.view = b.dataset.view; savePrefs(); render(); });
   });
@@ -652,20 +703,152 @@ dialog textarea { resize: vertical; min-height: 80px; }
   $("f-pri").addEventListener("change", function (e) { state.priority = e.target.value; render(); });
   $("show-done").addEventListener("change", function (e) { state.showDone = e.target.checked; savePrefs(); render(); });
   document.addEventListener("keydown", function (e) {
-    if (e.key.toLowerCase() === "n" && !e.ctrlKey && !e.metaKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !$("dlg").open) {
+    if (e.key.toLowerCase() === "n" && !e.ctrlKey && !e.metaKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !$("dlg").open && state.tab === "tasks") {
       e.preventDefault(); $("q-title").focus();
     }
   });
 
+  // ---------- month end ----------
+  // Clients carry over to every month; a client is closed for a month when it has a close_done row for that month.
+  var LOCAL_CLOSE_KEY = "task-tracker.close";
+  function ym(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1); }
+  function shiftMonth(month, n) { var p = month.split("-").map(Number); return ym(new Date(p[0], p[1] - 1 + n, 1)); }
+  function monthName(month) { var p = month.split("-").map(Number); return new Date(p[0], p[1] - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" }); }
+  var close = {
+    mode: "cloud",
+    loaded: false,
+    clients: [],        // {id, name, createdAt}
+    done: {},           // "clientId|YYYY-MM" -> closed-at ms
+    // Early in a month you're usually closing the month before, so start there.
+    month: new Date().getDate() <= 15 ? shiftMonth(ym(new Date()), -1) : ym(new Date())
+  };
+  function doneKey(id, month) { return id + "|" + month; }
+  function saveCloseLocal() { try { localStorage.setItem(LOCAL_CLOSE_KEY, JSON.stringify({ clients: close.clients, done: close.done })); } catch (e) {} }
+  function useCloseLocal() {
+    close.mode = "local";
+    try { var d = JSON.parse(localStorage.getItem(LOCAL_CLOSE_KEY)) || {}; close.clients = d.clients || []; close.done = d.done || {}; } catch (e) {}
+    close.loaded = true;
+    $("close-notice").textContent = "The month-end tables aren't set up yet, so this checklist is saved in this browser only. Run the month-end part of setup.sql in Supabase to share it.";
+    $("close-notice").hidden = false;
+    renderClose();
+  }
+  var closeLoading = null;
+  function loadClose() {
+    if (close.mode !== "cloud" || !state.sb || closeLoading) return closeLoading;
+    closeLoading = Promise.all([
+      state.sb.from("close_clients").select("*").order("name").limit(2000),
+      state.sb.from("close_done").select("*").limit(50000)
+    ]).then(function (res) {
+      res.forEach(function (r) { if (r.error) throw r.error; });
+      close.clients = res[0].data.map(function (r) { return { id: r.id, name: r.name, createdAt: Date.parse(r.created_at) || 0 }; });
+      close.done = {};
+      res[1].data.forEach(function (r) { close.done[doneKey(r.client_id, r.month)] = Date.parse(r.done_at) || Date.now(); });
+      close.loaded = true;
+      $("close-notice").hidden = true;
+      renderClose();
+    }).catch(function (err) {
+      console.error(err);
+      if (!close.loaded && setupHint(err)) useCloseLocal();
+    }).finally(function () { closeLoading = null; });
+    return closeLoading;
+  }
+  var closeReloadTimer;
+  function subscribeClose() {
+    var bump = function () { clearTimeout(closeReloadTimer); closeReloadTimer = setTimeout(loadClose, 300); };
+    state.sb.channel("close-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "close_clients" }, bump)
+      .on("postgres_changes", { event: "*", schema: "public", table: "close_done" }, bump)
+      .subscribe();
+  }
+  setInterval(function () { if (document.visibilityState === "visible") loadClose(); }, POLL_MS);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") loadClose(); });
+
+  function closeWrite(q) {
+    if (close.mode === "local") { saveCloseLocal(); return; }
+    q().then(function (res) { if (res.error) throw res.error; }).catch(function (err) { console.error(err); toast("Couldn't save — reloading"); loadClose(); });
+  }
+  function toggleClosed(c) {
+    var month = close.month, k = doneKey(c.id, month);
+    if (close.done[k]) {
+      delete close.done[k];
+      closeWrite(function () { return state.sb.from("close_done").delete().eq("client_id", c.id).eq("month", month); });
+    } else {
+      close.done[k] = Date.now();
+      var at = new Date(close.done[k]).toISOString();
+      closeWrite(function () { return state.sb.from("close_done").upsert({ client_id: c.id, month: month, done_at: at }); });
+      var left = close.clients.filter(function (x) { return !close.done[doneKey(x.id, month)]; }).length;
+      toast(left ? c.name + " closed · " + left + " to go" : "All clients closed for " + monthName(month));
+    }
+    renderClose();
+  }
+  function addClient(name) {
+    if (close.clients.some(function (c) { return c.name.toLowerCase() === name.toLowerCase(); })) { toast(name + " is already on the list"); return; }
+    var c = { id: uuid(), name: name, createdAt: Date.now() };
+    close.clients.push(c);
+    renderClose();
+    closeWrite(function () { return state.sb.from("close_clients").insert({ id: c.id, name: c.name }); });
+  }
+  function removeClient(c) {
+    if (!confirm("Remove " + c.name + "? Its month-end history goes too.")) return;
+    close.clients = close.clients.filter(function (x) { return x.id !== c.id; });
+    Object.keys(close.done).forEach(function (k) { if (k.indexOf(c.id + "|") === 0) delete close.done[k]; });
+    renderClose();
+    closeWrite(function () { return state.sb.from("close_clients").delete().eq("id", c.id); });
+  }
+
+  function renderClose() {
+    $("m-label").textContent = monthName(close.month);
+    var list = close.clients.slice().sort(function (a, b) { return a.name.localeCompare(b.name); });
+    var doneCount = list.filter(function (c) { return close.done[doneKey(c.id, close.month)]; }).length;
+    var pct = list.length ? Math.round(doneCount / list.length * 100) : 0;
+    $("c-done").textContent = doneCount; $("c-total").textContent = list.length;
+    $("c-pct").textContent = list.length ? pct + "%" : "";
+    $("c-bar").style.width = pct + "%";
+    if (!list.length) {
+      $("close-list").replaceChildren(el("div", { class: "empty", text: close.loaded ? "Add your clients above. They carry over to every month." : "Loading…" }));
+      return;
+    }
+    $("close-list").replaceChildren(el("div", { class: "rows" }, list.map(function (c) {
+      var at = close.done[doneKey(c.id, close.month)];
+      return el("div", { class: "row client" + (at ? " closed" : "") },
+        el("button", { type: "button", class: "tick" + (at ? " on" : ""), "aria-label": (at ? "Mark open: " : "Mark closed: ") + c.name, onclick: function () { toggleClosed(c); } }),
+        el("button", { type: "button", class: "main", onclick: function () { toggleClosed(c); } },
+          el("span", { class: "t", text: c.name }),
+          el("span", { class: "st", text: at ? "Closed " + new Date(at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Open" })),
+        el("div", { class: "row-actions" },
+          el("button", { type: "button", class: "icon-btn rm", "aria-label": "Remove " + c.name, title: "Remove client", text: "✕", onclick: function () { removeClient(c); } })));
+    })));
+  }
+  $("m-prev").addEventListener("click", function () { close.month = shiftMonth(close.month, -1); renderClose(); });
+  $("m-next").addEventListener("click", function () { close.month = shiftMonth(close.month, 1); renderClose(); });
+  $("add-client").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = $("c-name").value.trim(); if (!name) return;
+    addClient(name); $("c-name").value = ""; $("c-name").focus();
+  });
+
+  function showTab(tab) {
+    state.tab = tab;
+    document.querySelectorAll(".tabs button").forEach(function (b) { b.setAttribute("aria-selected", String(b.dataset.tab === tab)); });
+    $("tasks-tab").hidden = tab !== "tasks";
+    $("close-tab").hidden = tab !== "close";
+    savePrefs();
+  }
+  document.querySelectorAll(".tabs button").forEach(function (b) { b.addEventListener("click", function () { showTab(b.dataset.tab); }); });
+
   // ---------- start ----------
-  try { var prefs = JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; if (prefs.view === "board") state.view = "board"; state.showDone = !!prefs.showDone; } catch (e) {}
+  try { var prefs = JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; if (prefs.view === "board") state.view = "board"; state.showDone = !!prefs.showDone; if (prefs.tab === "close") state.tab = "close"; } catch (e) {}
   $("show-done").checked = state.showDone;
+  showTab(state.tab);
   render();
+  renderClose();
   if (window.supabase) {
     state.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     loadAll().then(function () { if (state.mode === "cloud") subscribeRealtime(); });
+    loadClose().then(function () { if (close.mode === "cloud") subscribeClose(); });
   } else {
     useLocal();
+    useCloseLocal();
   }
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(function () {});
 })();
