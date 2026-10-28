@@ -40,6 +40,11 @@
   --radius: 10px;
   color-scheme: dark;
 }
+/* Other themes only swap the base colors; status colors stay the same so meaning doesn't shift. */
+:root[data-theme="midnight"] { --bg: #000000; --surface: #0C0C0C; --raised: #151515; --ink: #F2F2F0; --muted: #8E8E8A; --line: #242424; --accent-soft: #141B33; --pc: #333333; }
+:root[data-theme="plum"] { --bg: #140F1C; --surface: #1D1628; --raised: #261D34; --ink: #EEE8F5; --muted: #9A8FAE; --line: #30263F; --accent: #C9A8FF; --accent-soft: #2A1E45; --pc: #40354F; }
+:root[data-theme="forest"] { --bg: #0D1512; --surface: #14201B; --raised: #1A2A23; --ink: #E6EFEA; --muted: #8AA197; --line: #24352D; --accent: #8FD9B6; --accent-soft: #163327; --pc: #33463D; }
+:root[data-theme="mocha"] { --bg: #17120F; --surface: #211A16; --raised: #2B221C; --ink: #F2EAE3; --muted: #A8968A; --line: #362B24; --accent: #F0B989; --accent-soft: #3A2819; --pc: #4A3C33; }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
@@ -168,12 +173,52 @@ dialog textarea { resize: vertical; min-height: 80px; }
 .dlg-foot { display: flex; justify-content: space-between; gap: 8px; margin-top: 4px; }
 .dlg-foot .right { display: flex; gap: 8px; }
 
+/* theme swatches */
+.themes { display: flex; gap: 6px; align-items: center; }
+.sw { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--line); background: var(--sw-bg); padding: 0; display: grid; place-items: center; }
+.sw::after { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--sw-ac); }
+.sw:hover { border-color: var(--muted); }
+.sw[aria-pressed="true"] { border-color: var(--ink); }
+
+/* verse of the day */
+.verse { position: relative; background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 0; padding: 14px 44px 14px 18px; display: grid; gap: 4px; }
+.verse p { margin: 0; font-family: Georgia, "Times New Roman", serif; font-size: 1.05rem; font-style: italic; line-height: 1.5; text-wrap: pretty; }
+.verse .ref { font-size: 0.82rem; color: var(--accent); font-weight: 600; }
+.verse .icon-btn { position: absolute; top: 8px; right: 8px; }
+
+/* weekly tasks grid */
+.wk-head { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 640px) { .wk-head { grid-template-columns: minmax(0, 1fr); } }
+form.wk-add { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+.wk-legend { margin: 0; display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: 0.82rem; color: var(--muted); }
+.wk-legend span::before { content: ""; display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-right: 6px; background: currentColor; }
+.grid-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+table.wk { border-collapse: separate; border-spacing: 0; width: 100%; }
+.wk th, .wk td { padding: 0; border-bottom: 1px solid var(--line); text-align: left; white-space: nowrap; }
+.wk tbody tr:last-child th, .wk tbody tr:last-child td { border-bottom: 0; }
+.wk thead th { background: var(--raised); }
+.wk th:first-child { position: sticky; left: 0; z-index: 1; background: var(--surface); border-right: 1px solid var(--line); }
+.wk thead th:first-child { background: var(--raised); z-index: 2; }
+.wk .corner { padding: 10px 14px; font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); }
+.wk button { width: 100%; border: 0; background: none; color: inherit; text-align: left; padding: 10px 14px; font: inherit; }
+.wk button:hover { background: var(--raised); }
+.wk thead button { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--muted); font-weight: 600; }
+.wk tbody th button { font-weight: 600; max-width: 13em; overflow: hidden; text-overflow: ellipsis; }
+.wk .c { font-family: var(--font-num); font-size: 0.85rem; min-width: 7.5em; }
+.wk .c.fresh, .wk-legend .fresh { color: var(--done); }
+.wk .c.stale, .wk-legend .stale { color: var(--normal); }
+.wk .c.old, .wk-legend .old { color: var(--late); }
+.wk .c.na { color: var(--muted); }
+.wk .c.blank { color: var(--pc); }
+.w-quick { display: flex; flex-wrap: wrap; gap: 8px; }
+
 /* top tabs */
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
 .tabs button { border: 0; background: transparent; color: var(--muted); font-weight: 600; padding: 10px 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
 .tabs button:hover { color: var(--ink); }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
-.tab { display: grid; gap: 20px; }
+.tab { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
+.wrap > * { min-width: 0; }
 
 /* month end */
 .close-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 14px; }
@@ -201,7 +246,7 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
 .note-btn.has::before { content: "Note: "; font-weight: 600; }
 .row.client .row-actions { align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .row.client select { padding: 5px 8px; font-size: 0.85rem; max-width: 9.5em; }
-.row.client input[type="date"] { padding: 5px 8px; font-size: 0.85rem; width: 9.6em; color-scheme: dark; }
+.row.client input[type="date"] { padding: 5px 8px; font-size: 0.85rem; width: 9.6em; }
 @media (max-width: 560px) {
   .row.client { row-gap: 8px; }
   .row.client .row-actions { grid-column: 2 / -1; justify-content: flex-start; }
@@ -221,11 +266,20 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
       <h1>Tasks</h1>
       <p><span class="sync" id="sync">Connecting…</span></p>
     </div>
+    <div class="themes" id="themes" role="group" aria-label="Theme"></div>
   </header>
+
+  <aside class="verse" id="verse" hidden aria-label="Verse of the day">
+    <span class="label">Verse of the day</span>
+    <p id="verse-text"></p>
+    <span class="ref" id="verse-ref"></span>
+    <button type="button" class="icon-btn" id="verse-close" aria-label="Hide for today" title="Hide for today">✕</button>
+  </aside>
 
   <nav class="tabs" role="tablist" aria-label="Sections">
     <button type="button" role="tab" data-tab="tasks" aria-selected="true">Tasks</button>
     <button type="button" role="tab" data-tab="close" aria-selected="false">Month end</button>
+    <button type="button" role="tab" data-tab="weekly" aria-selected="false">Weekly tasks</button>
   </nav>
 
   <div class="tab" id="tasks-tab">
@@ -286,6 +340,22 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
     </form>
     <div id="close-list"></div>
   </section>
+
+  <section class="tab" id="weekly-tab" hidden>
+    <div class="notice" id="weekly-notice" hidden></div>
+    <div class="wk-head">
+      <form class="wk-add" id="wk-add-client" autocomplete="off">
+        <input class="field" id="wk-client-name" placeholder="Add a client" aria-label="Client name" required maxlength="80">
+        <button class="primary" type="submit">Add client</button>
+      </form>
+      <form class="wk-add" id="wk-add-col" autocomplete="off">
+        <input class="field" id="wk-col-name" placeholder="Add a task column, like RAMP" aria-label="Task column name" required maxlength="60">
+        <button class="primary" type="submit">Add task</button>
+      </form>
+    </div>
+    <p class="wk-legend"><span class="fresh">Done in the last 7 days</span><span class="stale">8–14 days ago</span><span class="old">Older</span>Tap any date to change it.</p>
+    <div id="weekly-grid"></div>
+  </section>
 </div>
 
 <dialog id="dlg">
@@ -328,6 +398,39 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
   </form>
 </dialog>
 
+<dialog id="wdlg">
+  <form method="dialog" id="wdlg-form">
+    <h2 id="w-title"></h2>
+    <p class="label" id="w-sub" style="margin:-6px 0 0"></p>
+    <label><span class="label">Date done</span><input class="field" type="date" id="w-date"></label>
+    <div class="w-quick">
+      <button type="button" class="ghost" id="w-today">Done today</button>
+      <button type="button" class="ghost" id="w-na">Not applicable</button>
+    </div>
+    <div class="dlg-foot">
+      <button type="button" class="danger" id="w-clear">Clear</button>
+      <div class="right">
+        <button type="button" class="ghost" id="w-cancel">Cancel</button>
+        <button type="submit" class="primary" value="save">Save</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="rdlg">
+  <form method="dialog" id="rdlg-form">
+    <h2 id="r-title"></h2>
+    <label><span class="label">Name</span><input class="field" id="r-name" required maxlength="80"></label>
+    <div class="dlg-foot">
+      <button type="button" class="danger" id="r-delete">Delete</button>
+      <div class="right">
+        <button type="button" class="ghost" id="r-cancel">Cancel</button>
+        <button type="submit" class="primary" value="save">Save</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
 <div class="toast" id="toast" role="status" hidden></div>
 
 <script>
@@ -347,7 +450,8 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
     mode: "cloud",        // "cloud" (Supabase) or "local" (this browser only, until setup.sql is run)
     loaded: false,
     tasks: [],            // {id, title, notes, status, priority, due, project, createdAt, completedAt}
-    tab: "tasks",       // "tasks" or "close" (month end)
+    tab: "tasks",       // "tasks", "close" (month end) or "weekly"
+    theme: "navy",
     view: "list",
     search: "",
     project: "",
@@ -730,7 +834,7 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
     $("q-title").value = ""; $("q-due").value = ""; $("q-pri").value = "normal";
     $("q-title").focus();
   });
-  function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify({ view: state.view, showDone: state.showDone, tab: state.tab })); } catch (e) {} }
+  function savePrefs() { try { localStorage.setItem(PREFS_KEY, JSON.stringify({ view: state.view, showDone: state.showDone, tab: state.tab, theme: state.theme })); } catch (e) {} }
   document.querySelectorAll(".seg button").forEach(function (b) {
     b.addEventListener("click", function () { state.view = b.dataset.view; savePrefs(); render(); });
   });
@@ -970,25 +1074,254 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
   function showTab(tab) {
     state.tab = tab;
     document.querySelectorAll(".tabs button").forEach(function (b) { b.setAttribute("aria-selected", String(b.dataset.tab === tab)); });
-    $("tasks-tab").hidden = tab !== "tasks";
-    $("close-tab").hidden = tab !== "close";
+    ["tasks", "close", "weekly"].forEach(function (t) { $(t + "-tab").hidden = t !== tab; });
     savePrefs();
   }
   document.querySelectorAll(".tabs button").forEach(function (b) { b.addEventListener("click", function () { showTab(b.dataset.tab); }); });
 
+  // ---------- weekly tasks ----------
+  // Clients down the side, recurring tasks across the top. Each cell is the date the task was last done,
+  // or "na" when it doesn't apply to that client.
+  var LOCAL_WEEKLY_KEY = "task-tracker.weekly";
+  var WEEKLY_TABLE = { client: "weekly_clients", column: "weekly_columns" };
+  var weekly = { mode: "cloud", loaded: false, clients: [], columns: [], cells: {} };   // cells: "clientId|columnId" -> value
+  function cellKey(clientId, columnId) { return clientId + "|" + columnId; }
+  function bySort(a, b) { return a.sort - b.sort || a.createdAt - b.createdAt; }
+  function weeklyList(kind) { return kind === "client" ? weekly.clients : weekly.columns; }
+  function saveWeeklyLocal() { try { localStorage.setItem(LOCAL_WEEKLY_KEY, JSON.stringify({ clients: weekly.clients, columns: weekly.columns, cells: weekly.cells })); } catch (e) {} }
+  function useWeeklyLocal() {
+    weekly.mode = "local";
+    try { var d = JSON.parse(localStorage.getItem(LOCAL_WEEKLY_KEY)) || {}; weekly.clients = d.clients || []; weekly.columns = d.columns || []; weekly.cells = d.cells || {}; } catch (e) {}
+    weekly.loaded = true;
+    $("weekly-notice").textContent = "The weekly-task tables aren't set up yet, so this grid is saved in this browser only.";
+    $("weekly-notice").hidden = false;
+    renderWeekly();
+  }
+  function rowToItem(r) { return { id: r.id, name: r.name, sort: r.sort || 0, createdAt: Date.parse(r.created_at) || 0 }; }
+  var weeklyLoading = null;
+  function loadWeekly() {
+    if (weekly.mode !== "cloud" || !state.sb || weeklyLoading) return weeklyLoading;
+    weeklyLoading = Promise.all([
+      state.sb.from("weekly_clients").select("*").limit(1000),
+      state.sb.from("weekly_columns").select("*").limit(200),
+      state.sb.from("weekly_cells").select("*").limit(50000)
+    ]).then(function (res) {
+      res.forEach(function (r) { if (r.error) throw r.error; });
+      weekly.clients = res[0].data.map(rowToItem);
+      weekly.columns = res[1].data.map(rowToItem);
+      weekly.cells = {};
+      res[2].data.forEach(function (r) { weekly.cells[cellKey(r.client_id, r.column_id)] = r.value; });
+      weekly.loaded = true;
+      $("weekly-notice").hidden = true;
+      renderWeekly();
+    }).catch(function (err) {
+      console.error(err);
+      if (!weekly.loaded && setupHint(err)) useWeeklyLocal();
+    }).finally(function () { weeklyLoading = null; });
+    return weeklyLoading;
+  }
+  var weeklyReloadTimer;
+  function subscribeWeekly() {
+    var bump = function () { clearTimeout(weeklyReloadTimer); weeklyReloadTimer = setTimeout(loadWeekly, 300); };
+    var ch = state.sb.channel("weekly-changes");
+    ["weekly_clients", "weekly_columns", "weekly_cells"].forEach(function (t) { ch.on("postgres_changes", { event: "*", schema: "public", table: t }, bump); });
+    ch.subscribe();
+  }
+  setInterval(function () { if (document.visibilityState === "visible") loadWeekly(); }, POLL_MS);
+  document.addEventListener("visibilitychange", function () { if (document.visibilityState === "visible") loadWeekly(); });
+
+  function weeklyWrite(q) {
+    if (weekly.mode === "local") { saveWeeklyLocal(); return; }
+    q().then(function (res) { if (res.error) throw res.error; }).catch(function (err) { console.error(err); toast("Couldn't save — reloading"); loadWeekly(); });
+  }
+  function setCell(client, column, value) {
+    var k = cellKey(client.id, column.id);
+    if (value) weekly.cells[k] = value; else delete weekly.cells[k];
+    weeklyWrite(value
+      ? function () { return state.sb.from("weekly_cells").upsert({ client_id: client.id, column_id: column.id, value: value, updated_at: new Date().toISOString() }); }
+      : function () { return state.sb.from("weekly_cells").delete().eq("client_id", client.id).eq("column_id", column.id); });
+    renderWeekly();
+  }
+  function addWeekly(kind, name) {
+    var list = weeklyList(kind);
+    if (list.some(function (x) { return x.name.toLowerCase() === name.toLowerCase(); })) { toast(name + " is already there"); return; }
+    var item = { id: uuid(), name: name, sort: list.reduce(function (m, x) { return Math.max(m, x.sort); }, 0) + 1, createdAt: Date.now() };
+    list.push(item);
+    weeklyWrite(function () { return state.sb.from(WEEKLY_TABLE[kind]).insert({ id: item.id, name: item.name, sort: item.sort }); });
+    renderWeekly();
+  }
+  function renameWeekly(kind, item, name) {
+    if (name === item.name) return;
+    item.name = name;
+    weeklyWrite(function () { return state.sb.from(WEEKLY_TABLE[kind]).update({ name: name }).eq("id", item.id); });
+    renderWeekly();
+  }
+  function removeWeekly(kind, item) {
+    if (!confirm("Delete " + item.name + "? Its dates go too.")) return false;
+    var list = weeklyList(kind);
+    list.splice(list.indexOf(item), 1);
+    Object.keys(weekly.cells).forEach(function (k) { var ids = k.split("|"); if (ids[0] === item.id || ids[1] === item.id) delete weekly.cells[k]; });
+    weeklyWrite(function () { return state.sb.from(WEEKLY_TABLE[kind]).delete().eq("id", item.id); });
+    renderWeekly();
+    return true;
+  }
+
+  function renderWeekly() {
+    var cols = weekly.columns.slice().sort(bySort), rows = weekly.clients.slice().sort(bySort);
+    if (!rows.length || !cols.length) {
+      $("weekly-grid").replaceChildren(el("div", { class: "empty", text: !weekly.loaded ? "Loading…"
+        : !cols.length ? "Add your task columns (like RAMP or Bank feeds) and your clients above." : "Add your clients above." }));
+      return;
+    }
+    var head = el("tr", null, el("th", { scope: "col", class: "corner", text: "Client" }), cols.map(function (col) {
+      return el("th", { scope: "col" }, el("button", { type: "button", title: "Rename or delete", onclick: function () { openRename("column", col); } }, col.name));
+    }));
+    var body = rows.map(function (cl) {
+      return el("tr", null,
+        el("th", { scope: "row" }, el("button", { type: "button", title: "Rename or delete", onclick: function () { openRename("client", cl); } }, cl.name)),
+        cols.map(function (col) {
+          var v = weekly.cells[cellKey(cl.id, col.id)], cls = "c", text = "—";
+          if (v === "na") { cls += " na"; text = "N/A"; }
+          else if (v) {
+            var age = -dayDiff(v);
+            cls += age <= 7 ? " fresh" : age <= 14 ? " stale" : " old";
+            text = new Date(v + "T00:00").toLocaleDateString(undefined, { month: "numeric", day: "numeric", year: "numeric" });
+          } else cls += " blank";
+          return el("td", null, el("button", { type: "button", class: cls, "aria-label": cl.name + ", " + col.name + ": " + (v ? text : "not set"),
+            onclick: function () { openCell(cl, col); } }, text));
+        }));
+    });
+    $("weekly-grid").replaceChildren(el("div", { class: "grid-wrap" },
+      el("table", { class: "wk" }, el("thead", null, head), el("tbody", null, body))));
+  }
+
+  var cellFor = null;
+  function openCell(cl, col) {
+    cellFor = { client: cl, column: col };
+    var v = weekly.cells[cellKey(cl.id, col.id)];
+    $("w-title").textContent = cl.name;
+    $("w-sub").textContent = col.name;
+    $("w-date").value = v && v !== "na" ? v : todayISO();
+    $("wdlg").showModal();
+  }
+  function finishCell(value) {
+    if (cellFor) setCell(cellFor.client, cellFor.column, value);
+    $("wdlg").close();
+  }
+  $("wdlg-form").addEventListener("submit", function (e) { e.preventDefault(); finishCell($("w-date").value); });
+  $("w-today").addEventListener("click", function () { finishCell(todayISO()); });
+  $("w-na").addEventListener("click", function () { finishCell("na"); });
+  $("w-clear").addEventListener("click", function () { finishCell(""); });
+  $("w-cancel").addEventListener("click", function () { $("wdlg").close(); });
+  $("wdlg").addEventListener("close", function () { cellFor = null; });
+
+  var renameFor = null;
+  function openRename(kind, item) {
+    renameFor = { kind: kind, item: item };
+    $("r-title").textContent = kind === "client" ? "Client" : "Task column";
+    $("r-name").value = item.name;
+    $("rdlg").showModal();
+    $("r-name").select();
+  }
+  $("rdlg-form").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var name = $("r-name").value.trim();
+    if (renameFor && name) renameWeekly(renameFor.kind, renameFor.item, name);
+    $("rdlg").close();
+  });
+  $("r-delete").addEventListener("click", function () { if (renameFor && removeWeekly(renameFor.kind, renameFor.item)) $("rdlg").close(); });
+  $("r-cancel").addEventListener("click", function () { $("rdlg").close(); });
+  $("rdlg").addEventListener("close", function () { renameFor = null; });
+
+  [["wk-add-client", "wk-client-name", "client"], ["wk-add-col", "wk-col-name", "column"]].forEach(function (f) {
+    $(f[0]).addEventListener("submit", function (e) {
+      e.preventDefault();
+      var name = $(f[1]).value.trim(); if (!name) return;
+      addWeekly(f[2], name); $(f[1]).value = ""; $(f[1]).focus();
+    });
+  });
+
+  // ---------- theme and verse of the day ----------
+  var THEMES = [["navy", "Navy", "#0E1117", "#9DB4FF"], ["midnight", "Midnight", "#000000", "#9DB4FF"], ["plum", "Plum", "#140F1C", "#C9A8FF"],
+    ["forest", "Forest", "#0D1512", "#8FD9B6"], ["mocha", "Mocha", "#17120F", "#F0B989"]];
+  function applyTheme(name) {
+    var t = THEMES.filter(function (x) { return x[0] === name; })[0] || THEMES[0];
+    state.theme = t[0];
+    document.documentElement.setAttribute("data-theme", t[0]);
+    document.querySelector('meta[name="theme-color"]').setAttribute("content", t[2]);
+    $("themes").querySelectorAll("button").forEach(function (b) { b.setAttribute("aria-pressed", String(b.dataset.theme === t[0])); });
+  }
+  $("themes").replaceChildren.apply($("themes"), THEMES.map(function (t) {
+    return el("button", { type: "button", class: "sw", "data-theme": t[0], title: t[1] + " theme", "aria-label": t[1] + " theme",
+      style: "--sw-bg:" + t[2] + ";--sw-ac:" + t[3], onclick: function () { applyTheme(t[0]); savePrefs(); } });
+  }));
+
+  // King James Version (public domain). One per day, in order, so everyone sees the same verse.
+  var VERSES = [
+    ["I can do all things through Christ which strengtheneth me.", "Philippians 4:13"],
+    ["Commit thy works unto the LORD, and thy thoughts shall be established.", "Proverbs 16:3"],
+    ["This is the day which the LORD hath made; we will rejoice and be glad in it.", "Psalm 118:24"],
+    ["Be strong and of a good courage; be not afraid, neither be thou dismayed: for the LORD thy God is with thee whithersoever thou goest.", "Joshua 1:9"],
+    ["Casting all your care upon him; for he careth for you.", "1 Peter 5:7"],
+    ["Trust in the LORD with all thine heart; and lean not unto thine own understanding.", "Proverbs 3:5"],
+    ["And whatsoever ye do, do it heartily, as to the Lord, and not unto men.", "Colossians 3:23"],
+    ["The LORD is my shepherd; I shall not want.", "Psalm 23:1"],
+    ["Let us not be weary in well doing: for in due season we shall reap, if we faint not.", "Galatians 6:9"],
+    ["Be still, and know that I am God.", "Psalm 46:10"],
+    ["The joy of the LORD is your strength.", "Nehemiah 8:10"],
+    ["In all thy ways acknowledge him, and he shall direct thy paths.", "Proverbs 3:6"],
+    ["Come unto me, all ye that labour and are heavy laden, and I will give you rest.", "Matthew 11:28"],
+    ["Be careful for nothing; but in every thing by prayer and supplication with thanksgiving let your requests be made known unto God.", "Philippians 4:6"],
+    ["Thy word is a lamp unto my feet, and a light unto my path.", "Psalm 119:105"],
+    ["For God hath not given us the spirit of fear; but of power, and of love, and of a sound mind.", "2 Timothy 1:7"],
+    ["Wait on the LORD: be of good courage, and he shall strengthen thine heart.", "Psalm 27:14"],
+    ["The LORD is good, a strong hold in the day of trouble; and he knoweth them that trust in him.", "Nahum 1:7"],
+    ["But they that wait upon the LORD shall renew their strength; they shall mount up with wings as eagles.", "Isaiah 40:31"],
+    ["And we know that all things work together for good to them that love God.", "Romans 8:28"],
+    ["Let all your things be done with charity.", "1 Corinthians 16:14"],
+    ["The hand of the diligent maketh rich.", "Proverbs 10:4"],
+    ["Every good gift and every perfect gift is from above.", "James 1:17"],
+    ["His compassions fail not. They are new every morning: great is thy faithfulness.", "Lamentations 3:22–23"],
+    ["Fear thou not; for I am with thee: be not dismayed; for I am thy God.", "Isaiah 41:10"],
+    ["O give thanks unto the LORD, for he is good: for his mercy endureth for ever.", "Psalm 107:1"],
+    ["Peace I leave with you, my peace I give unto you.", "John 14:27"],
+    ["Rejoice in the Lord alway: and again I say, Rejoice.", "Philippians 4:4"],
+    ["With God all things are possible.", "Matthew 19:26"],
+    ["The LORD shall fight for you, and ye shall hold your peace.", "Exodus 14:14"],
+    ["Delight thyself also in the LORD; and he shall give thee the desires of thine heart.", "Psalm 37:4"]
+  ];
+  var VERSE_HIDDEN_KEY = "task-tracker.verse-hidden";
+  function showVerse() {
+    var day = Math.floor((Date.now() - new Date().getTimezoneOffset() * 60000) / 86400000);
+    var v = VERSES[day % VERSES.length], hidden = false;
+    try { hidden = localStorage.getItem(VERSE_HIDDEN_KEY) === todayISO(); } catch (e) {}
+    $("verse-text").textContent = v[0];
+    $("verse-ref").textContent = v[1];
+    $("verse").hidden = hidden;
+  }
+  $("verse-close").addEventListener("click", function () {
+    try { localStorage.setItem(VERSE_HIDDEN_KEY, todayISO()); } catch (e) {}
+    $("verse").hidden = true;
+  });
+
   // ---------- start ----------
-  try { var prefs = JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; if (prefs.view === "board") state.view = "board"; state.showDone = !!prefs.showDone; if (prefs.tab === "close") state.tab = "close"; } catch (e) {}
+  try { var prefs = JSON.parse(localStorage.getItem(PREFS_KEY)) || {}; if (prefs.view === "board") state.view = "board"; state.showDone = !!prefs.showDone; if (prefs.tab === "close" || prefs.tab === "weekly") state.tab = prefs.tab; if (prefs.theme) state.theme = prefs.theme; } catch (e) {}
   $("show-done").checked = state.showDone;
+  applyTheme(state.theme);
+  showVerse();
   showTab(state.tab);
   render();
   renderClose();
+  renderWeekly();
   if (window.supabase) {
     state.sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
     loadAll().then(function () { if (state.mode === "cloud") subscribeRealtime(); });
     loadClose().then(function () { if (close.mode === "cloud") subscribeClose(); });
+    loadWeekly().then(function () { if (weekly.mode === "cloud") subscribeWeekly(); });
   } else {
     useLocal();
     useCloseLocal();
+    useWeeklyLocal();
   }
   if ("serviceWorker" in navigator && location.protocol === "https:") navigator.serviceWorker.register("/sw.js").catch(function () {});
 })();

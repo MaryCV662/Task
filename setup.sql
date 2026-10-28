@@ -75,3 +75,47 @@ begin
 end $$;
 
 notify pgrst, 'reload schema';
+
+-- ---------- Weekly tasks ----------
+-- Clients down the side, recurring tasks across the top; each cell is the date last done, or 'na'.
+create table if not exists weekly_clients (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  sort int not null default 0,
+  created_at timestamptz not null default now()
+);
+create table if not exists weekly_columns (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  sort int not null default 0,
+  created_at timestamptz not null default now()
+);
+create table if not exists weekly_cells (
+  client_id uuid not null references weekly_clients(id) on delete cascade,
+  column_id uuid not null references weekly_columns(id) on delete cascade,
+  value text not null check (value = 'na' or value ~ '^\d{4}-\d{2}-\d{2}$'),
+  updated_at timestamptz not null default now(),
+  primary key (client_id, column_id)
+);
+
+alter table weekly_clients enable row level security;
+alter table weekly_columns enable row level security;
+alter table weekly_cells enable row level security;
+drop policy if exists "allow all weekly_clients" on weekly_clients;
+create policy "allow all weekly_clients" on weekly_clients for all using (true) with check (true);
+drop policy if exists "allow all weekly_columns" on weekly_columns;
+create policy "allow all weekly_columns" on weekly_columns for all using (true) with check (true);
+drop policy if exists "allow all weekly_cells" on weekly_cells;
+create policy "allow all weekly_cells" on weekly_cells for all using (true) with check (true);
+
+do $$
+declare t text;
+begin
+  foreach t in array array['weekly_clients','weekly_columns','weekly_cells'] loop
+    if not exists (select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = t) then
+      execute format('alter publication supabase_realtime add table %I', t);
+    end if;
+  end loop;
+end $$;
+
+notify pgrst, 'reload schema';
