@@ -194,6 +194,11 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
 .row.client .st { font-size: 0.82rem; color: var(--muted); }
 .row.client.closed .st { color: var(--done); }
 .row.client .st { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.row.client .cmain { display: grid; gap: 4px; min-width: 0; }
+.note-btn { border: 0; background: none; padding: 0; text-align: left; font-size: 0.82rem; color: var(--muted); justify-self: start; max-width: 100%; }
+.note-btn:hover { color: var(--ink); }
+.note-btn.has { color: var(--normal); white-space: pre-line; overflow-wrap: anywhere; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.note-btn.has::before { content: "Note: "; font-weight: 600; }
 .row.client .row-actions { align-items: center; flex-wrap: wrap; justify-content: flex-end; }
 .row.client select { padding: 5px 8px; font-size: 0.85rem; max-width: 9.5em; }
 .row.client input[type="date"] { padding: 5px 8px; font-size: 0.85rem; width: 9.6em; color-scheme: dark; }
@@ -302,6 +307,21 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
       <button type="button" class="danger" id="e-delete">Delete</button>
       <div class="right">
         <button type="button" class="ghost" id="e-cancel">Cancel</button>
+        <button type="submit" class="primary" value="save">Save</button>
+      </div>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="ndlg">
+  <form method="dialog" id="ndlg-form">
+    <h2 id="n-title">Notes</h2>
+    <p class="label" id="n-sub" style="margin:-6px 0 0"></p>
+    <textarea class="field" id="n-text" rows="7" maxlength="4000" placeholder="Questions to ask, documents you're waiting on, anything to remember"></textarea>
+    <div class="dlg-foot">
+      <button type="button" class="danger" id="n-clear">Clear</button>
+      <div class="right">
+        <button type="button" class="ghost" id="n-cancel">Cancel</button>
         <button type="submit" class="primary" value="save">Save</button>
       </div>
     </div>
@@ -718,7 +738,7 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
   $("f-pri").addEventListener("change", function (e) { state.priority = e.target.value; render(); });
   $("show-done").addEventListener("change", function (e) { state.showDone = e.target.checked; savePrefs(); render(); });
   document.addEventListener("keydown", function (e) {
-    if (e.key.toLowerCase() === "n" && !e.ctrlKey && !e.metaKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !$("dlg").open && state.tab === "tasks") {
+    if (e.key.toLowerCase() === "n" && !e.ctrlKey && !e.metaKey && !e.altKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName) && !$("dlg").open && !$("ndlg").open && state.tab === "tasks") {
       e.preventDefault(); $("q-title").focus();
     }
   });
@@ -760,14 +780,15 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
     clients: [],        // {id, name, createdAt}
     done: {},           // "clientId|YYYY-MM" -> closed-at ms
     plan: {},           // "clientId|YYYY-MM" -> planned work date "YYYY-MM-DD"
+    notes: {},          // "clientId|YYYY-MM" -> notes for that month's close
     // Early in a month you're usually closing the month before, so start there.
     month: new Date().getDate() <= 15 ? shiftMonth(ym(new Date()), -1) : ym(new Date())
   };
   function doneKey(id, month) { return id + "|" + month; }
-  function saveCloseLocal() { try { localStorage.setItem(LOCAL_CLOSE_KEY, JSON.stringify({ clients: close.clients, done: close.done, plan: close.plan })); } catch (e) {} }
+  function saveCloseLocal() { try { localStorage.setItem(LOCAL_CLOSE_KEY, JSON.stringify({ clients: close.clients, done: close.done, plan: close.plan, notes: close.notes })); } catch (e) {} }
   function useCloseLocal() {
     close.mode = "local";
-    try { var d = JSON.parse(localStorage.getItem(LOCAL_CLOSE_KEY)) || {}; close.clients = d.clients || []; close.done = d.done || {}; close.plan = d.plan || {}; } catch (e) {}
+    try { var d = JSON.parse(localStorage.getItem(LOCAL_CLOSE_KEY)) || {}; close.clients = d.clients || []; close.done = d.done || {}; close.plan = d.plan || {}; close.notes = d.notes || {}; } catch (e) {}
     close.loaded = true;
     $("close-notice").textContent = "The month-end tables aren't set up yet, so this checklist is saved in this browser only. Run the month-end part of setup.sql in Supabase to share it.";
     $("close-notice").hidden = false;
@@ -782,11 +803,12 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
     ]).then(function (res) {
       res.forEach(function (r) { if (r.error) throw r.error; });
       close.clients = res[0].data.map(function (r) { return { id: r.id, name: r.name, createdAt: Date.parse(r.created_at) || 0, withWho: r.worked_with || "" }; });
-      close.done = {}; close.plan = {};
+      close.done = {}; close.plan = {}; close.notes = {};
       res[1].data.forEach(function (r) {
         var k = doneKey(r.client_id, r.month);
         if (r.done_at) close.done[k] = Date.parse(r.done_at) || Date.now();
         if (r.work_date) close.plan[k] = String(r.work_date);
+        if (r.notes) close.notes[k] = r.notes;
       });
       close.loaded = true;
       $("close-notice").hidden = true;
@@ -816,8 +838,8 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
     var month = close.month, k = doneKey(c.id, month);
     if (close.done[k]) {
       delete close.done[k];
-      // Keep the row if it still holds a planned date; otherwise there's nothing left to store.
-      closeWrite(close.plan[k]
+      // Keep the row if it still holds a planned date or notes; otherwise there's nothing left to store.
+      closeWrite(close.plan[k] || close.notes[k]
         ? function () { return state.sb.from("close_done").update({ done_at: null }).eq("client_id", c.id).eq("month", month); }
         : function () { return state.sb.from("close_done").delete().eq("client_id", c.id).eq("month", month); });
     } else {
@@ -850,7 +872,7 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
   function removeClient(c) {
     if (!confirm("Remove " + c.name + "? Its month-end history goes too.")) return;
     close.clients = close.clients.filter(function (x) { return x.id !== c.id; });
-    [close.done, close.plan].forEach(function (m) { Object.keys(m).forEach(function (k) { if (k.indexOf(c.id + "|") === 0) delete m[k]; }); });
+    [close.done, close.plan, close.notes].forEach(function (m) { Object.keys(m).forEach(function (k) { if (k.indexOf(c.id + "|") === 0) delete m[k]; }); });
     renderClose();
     closeWrite(function () { return state.sb.from("close_clients").delete().eq("id", c.id); });
   }
@@ -898,15 +920,39 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
     }
     return el("div", { class: "row client" + (at ? " closed" : "") },
       el("button", { type: "button", class: "tick" + (at ? " on" : ""), "aria-label": (at ? "Mark open: " : "Mark closed: ") + c.name, onclick: function () { toggleClosed(c); } }),
-      el("button", { type: "button", class: "main", onclick: function () { toggleClosed(c); } },
-        el("span", { class: "t", text: c.name }),
-        st),
+      el("div", { class: "cmain" },
+        el("button", { type: "button", class: "main", onclick: function () { toggleClosed(c); } },
+          el("span", { class: "t", text: c.name }),
+          st),
+        el("button", { type: "button", class: "note-btn" + (close.notes[k] ? " has" : ""), title: "Notes for " + monthName(close.month),
+          text: close.notes[k] || "+ Add note", onclick: function () { openNotes(c); } })),
       el("div", { class: "row-actions" },
         personSelect(c.withWho, "Worked with on " + c.name, function (who) { setWorkedWith(c, who); }),
         el("input", { type: "date", class: "field", value: when || "", title: "Date to work on it", "aria-label": "Date to work on " + c.name,
           onchange: function (e) { setWorkDate(c, e.target.value); } }),
         el("button", { type: "button", class: "icon-btn rm", "aria-label": "Remove " + c.name, title: "Remove client", text: "✕", onclick: function () { removeClient(c); } })));
   }
+  var notesFor = null;
+  function openNotes(c) {
+    notesFor = { client: c, month: close.month };
+    $("n-title").textContent = c.name;
+    $("n-sub").textContent = "Notes for " + monthName(close.month);
+    $("n-text").value = close.notes[doneKey(c.id, close.month)] || "";
+    $("ndlg").showModal();
+    $("n-text").focus();
+  }
+  function saveNotes(text) {
+    if (!notesFor) return;
+    var c = notesFor.client, month = notesFor.month, k = doneKey(c.id, month);
+    if ((close.notes[k] || "") === text) return;
+    if (text) close.notes[k] = text; else delete close.notes[k];
+    closeWrite(function () { return state.sb.from("close_done").upsert({ client_id: c.id, month: month, notes: text }); });
+    renderClose();
+  }
+  $("ndlg-form").addEventListener("submit", function () { saveNotes($("n-text").value.trim()); });
+  $("n-cancel").addEventListener("click", function () { $("ndlg").close(); });
+  $("n-clear").addEventListener("click", function () { saveNotes(""); $("ndlg").close(); });
+  $("ndlg").addEventListener("close", function () { notesFor = null; });
   var addWithWho = "";
   function renderAddPerson() {
     var sel = personSelect(addWithWho, "Worked with", function (who) { addWithWho = who; renderAddPerson(); });

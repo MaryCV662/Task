@@ -39,7 +39,7 @@ create table if not exists close_clients (
   created_at timestamptz not null default now()
 );
 
--- One row per client per month: the planned work date and, once ticked, when it was closed.
+-- One row per client per month: the planned work date, notes, and, once ticked, when it was closed.
 create table if not exists close_done (
   client_id uuid not null references close_clients(id) on delete cascade,
   month text not null check (month ~ '^\d{4}-\d{2}$'),
@@ -53,6 +53,7 @@ alter table close_clients add column if not exists worked_with text not null def
 alter table close_done add column if not exists work_date date;
 alter table close_done alter column done_at drop not null;
 alter table close_done alter column done_at drop default;
+alter table close_done add column if not exists notes text not null default '';
 
 alter table close_clients enable row level security;
 alter table close_done enable row level security;
