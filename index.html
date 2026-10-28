@@ -229,9 +229,17 @@ table.wk { border-collapse: separate; border-spacing: 0; width: 100%; }
 
 /* top tabs */
 .tabs { display: flex; gap: 4px; border-bottom: 1px solid var(--line); overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
-.tabs button { border: 0; background: transparent; color: var(--muted); font-weight: 600; padding: 10px 14px; border-bottom: 2px solid transparent; margin-bottom: -1px; white-space: nowrap; }
-.tabs button:hover { color: var(--ink); }
-.tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+/* Each section has its own color: a dot when idle, a tinted tab with a colored underline when open. */
+.tabs button[data-tab="tasks"] { --tc: #9DB4FF; }
+.tabs button[data-tab="close"] { --tc: #43D9A0; }
+.tabs button[data-tab="weekly"] { --tc: #F5A54A; }
+:root[data-theme="paper"] .tabs button[data-tab="tasks"] { --tc: #3D63C9; }
+:root[data-theme="paper"] .tabs button[data-tab="close"] { --tc: #2F8A57; }
+:root[data-theme="paper"] .tabs button[data-tab="weekly"] { --tc: #B8641A; }
+.tabs button { border: 0; background: color-mix(in srgb, var(--tc) 6%, transparent); color: color-mix(in srgb, var(--tc) 60%, var(--muted)); font-weight: 600; padding: 10px 14px; border-bottom: 3px solid transparent; border-radius: 8px 8px 0 0; white-space: nowrap; display: inline-flex; align-items: center; gap: 8px; }
+.tabs button::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--tc); }
+.tabs button:hover { color: var(--tc); background: color-mix(in srgb, var(--tc) 10%, transparent); }
+.tabs button[aria-selected="true"] { color: var(--tc); border-bottom-color: var(--tc); background: color-mix(in srgb, var(--tc) 14%, transparent); }
 .tab { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr); }
 .wrap > * { min-width: 0; }
 
