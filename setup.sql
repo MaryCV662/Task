@@ -39,13 +39,19 @@ create table if not exists close_clients (
   created_at timestamptz not null default now()
 );
 
--- One row per client per month that's been closed. Unticking deletes the row.
+-- One row per client per month: the planned work date and, once ticked, when it was closed.
 create table if not exists close_done (
   client_id uuid not null references close_clients(id) on delete cascade,
   month text not null check (month ~ '^\d{4}-\d{2}$'),
-  done_at timestamptz not null default now(),
+  work_date date,
+  done_at timestamptz,
   primary key (client_id, month)
 );
+
+-- Upgrades a table made by the first version of this script.
+alter table close_done add column if not exists work_date date;
+alter table close_done alter column done_at drop not null;
+alter table close_done alter column done_at drop default;
 
 alter table close_clients enable row level security;
 alter table close_done enable row level security;
