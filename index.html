@@ -45,6 +45,21 @@
 :root[data-theme="plum"] { --bg: #140F1C; --surface: #1D1628; --raised: #261D34; --ink: #EEE8F5; --muted: #9A8FAE; --line: #30263F; --accent: #C9A8FF; --accent-soft: #2A1E45; --pc: #40354F; }
 :root[data-theme="forest"] { --bg: #0D1512; --surface: #14201B; --raised: #1A2A23; --ink: #E6EFEA; --muted: #8AA197; --line: #24352D; --accent: #8FD9B6; --accent-soft: #163327; --pc: #33463D; }
 :root[data-theme="mocha"] { --bg: #17120F; --surface: #211A16; --raised: #2B221C; --ink: #F2EAE3; --muted: #A8968A; --line: #362B24; --accent: #F0B989; --accent-soft: #3A2819; --pc: #4A3C33; }
+/* Light theme: warm paper. Status colors are darkened so they read on cream, and project tints are mixed light. */
+:root[data-theme="paper"] {
+  --bg: #F6F1E7; --surface: #FFFDF8; --raised: #EFE7D8; --ink: #2B2620; --muted: #7D7262; --line: #E2D9C7;
+  --accent: #B4532A; --accent-soft: #F6E2D6; --done: #2F8A57; --done-soft: #DDEFE2; --late: #B8432C; --late-soft: #F7DDD5;
+  --high: #B8432C; --normal: #A8740C; --low: #9A8F7E; --pc: #D6CCB8;
+  --font-display: Georgia, "Times New Roman", serif;
+  color-scheme: light;
+}
+:root[data-theme="paper"] .chip.proj, :root[data-theme="paper"] .pill:not(.all):not([aria-pressed="true"]) {
+  background: color-mix(in srgb, var(--pc) 20%, #FFFDF8); color: color-mix(in srgb, var(--pc) 55%, #1E1A15);
+}
+:root[data-theme="paper"] .sw[data-theme="paper"] { border-color: var(--muted); }
+:root[data-theme="paper"] .sw[aria-pressed="true"] { border-color: var(--ink); }
+:root[data-theme="paper"] dialog::backdrop { background: rgba(43, 38, 32, 0.45); }
+:root[data-theme="paper"] .toast { box-shadow: 0 8px 24px rgba(43, 38, 32, 0.25); }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
 body { background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 15px; line-height: 1.5; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
@@ -69,7 +84,7 @@ header p { margin: 4px 0 0; color: var(--muted); font-size: 0.85rem; }
 .field:focus { border-color: var(--muted); outline: none; }
 select.field { padding-right: 6px; }
 .primary { border: 0; background: var(--ink); color: var(--bg); font-weight: 600; border-radius: 8px; padding: 9px 16px; white-space: nowrap; }
-.primary:hover { background: #fff; }
+.primary:hover { opacity: 0.88; }
 .ghost { border: 1px solid var(--line); background: transparent; border-radius: 999px; padding: 7px 13px; font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
 .ghost:hover { color: var(--ink); border-color: var(--muted); }
 .danger { border: 1px solid var(--line); background: transparent; border-radius: 8px; padding: 9px 14px; color: var(--late); }
@@ -154,7 +169,7 @@ form.quick .title { font-size: 1rem; }
 .col-head { display: flex; justify-content: space-between; align-items: baseline; padding: 0 2px 4px; }
 .col-head .count { font-family: var(--font-num); font-size: 0.8rem; color: var(--muted); }
 .card { background: var(--raised); border: 1px solid var(--line); border-left: 4px solid var(--pc); border-radius: 0; padding: 10px 12px; display: grid; gap: 6px; cursor: grab; }
-.card:hover { border-color: #3a3a3a; }
+.card:hover { border-color: var(--muted); }
 .card.dragging { opacity: 0.4; }
 .card .t { font-weight: 600; overflow-wrap: anywhere; }
 .card.is-done .t { color: var(--muted); text-decoration: line-through; }
@@ -1243,7 +1258,7 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0,
 
   // ---------- theme and verse of the day ----------
   var THEMES = [["navy", "Navy", "#0E1117", "#9DB4FF"], ["midnight", "Midnight", "#000000", "#9DB4FF"], ["plum", "Plum", "#140F1C", "#C9A8FF"],
-    ["forest", "Forest", "#0D1512", "#8FD9B6"], ["mocha", "Mocha", "#17120F", "#F0B989"]];
+    ["forest", "Forest", "#0D1512", "#8FD9B6"], ["mocha", "Mocha", "#17120F", "#F0B989"], ["paper", "Paper", "#F6F1E7", "#B4532A"]];
   function applyTheme(name) {
     var t = THEMES.filter(function (x) { return x[0] === name; })[0] || THEMES[0];
     state.theme = t[0];
