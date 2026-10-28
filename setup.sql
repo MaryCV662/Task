@@ -48,7 +48,8 @@ create table if not exists close_done (
   primary key (client_id, month)
 );
 
--- Upgrades a table made by the first version of this script.
+-- Upgrades tables made by earlier versions of this script.
+alter table close_clients add column if not exists worked_with text not null default '';
 alter table close_done add column if not exists work_date date;
 alter table close_done alter column done_at drop not null;
 alter table close_done alter column done_at drop default;

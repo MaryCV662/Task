@@ -186,16 +186,23 @@ dialog textarea { resize: vertical; min-height: 80px; }
 .progress .txt b { color: var(--ink); font-family: var(--font-num); font-weight: 500; }
 .progress .track { height: 8px; background: var(--raised); border-radius: 99px; overflow: hidden; }
 .progress .track i { display: block; height: 100%; background: var(--done); border-radius: 99px; transition: width .3s ease; }
-form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 8px; }
+form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 11em) auto; gap: 8px; }
+@media (max-width: 560px) { form.add-client { grid-template-columns: minmax(0, 1fr) auto; } form.add-client #c-name { grid-column: 1 / -1; } }
+#close-list .group + .group { margin-top: 18px; }
+#close-list .group-head .count b { color: var(--ink); font-weight: 500; }
 .row.client.closed { --pc: var(--done); }
 .row.client .st { font-size: 0.82rem; color: var(--muted); }
 .row.client.closed .st { color: var(--done); }
 .row.client .st { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
-.row.client .row-actions { align-items: center; }
+.row.client .row-actions { align-items: center; flex-wrap: wrap; justify-content: flex-end; }
+.row.client select { padding: 5px 8px; font-size: 0.85rem; max-width: 9.5em; }
 .row.client input[type="date"] { padding: 5px 8px; font-size: 0.85rem; width: 9.6em; color-scheme: dark; }
 @media (max-width: 560px) {
   .row.client { row-gap: 8px; }
-  .row.client .row-actions { grid-column: 2 / -1; justify-content: space-between; }
+  .row.client .row-actions { grid-column: 2 / -1; justify-content: flex-start; }
+  .row.client .row-actions .rm { margin-left: auto; }
+  .row.client select { max-width: 7em; }
+  .row.client input[type="date"] { width: 8.8em; }
 }
 
 .toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 999px; font-weight: 600; font-size: 0.9rem; display: flex; gap: 14px; align-items: center; box-shadow: 0 8px 30px rgba(0,0,0,.5); z-index: 10; max-width: calc(100vw - 32px); }
@@ -269,6 +276,7 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap
     </div>
     <form class="add-client" id="add-client" autocomplete="off">
       <input class="field" id="c-name" placeholder="Add a client" aria-label="Client name" required maxlength="120">
+      <select class="field" id="c-with" aria-label="Worked with"></select>
       <button class="primary" type="submit">Add client</button>
     </form>
     <div id="close-list"></div>
@@ -719,6 +727,30 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap
   // Clients carry over to every month. Each client-month has an optional close_done row holding the planned
   // work date and, once ticked, the closed-at time.
   var LOCAL_CLOSE_KEY = "task-tracker.close";
+  var PEOPLE = ["Jen", "Teresa Crook", "Michelle", "Gerri", "Whitney"];
+  // The usual team first, then anyone else who's been typed in.
+  function people() {
+    var extra = {};
+    close.clients.forEach(function (c) { if (c.withWho && PEOPLE.indexOf(c.withWho) < 0) extra[c.withWho] = 1; });
+    return PEOPLE.concat(Object.keys(extra).sort(function (a, b) { return a.localeCompare(b); }));
+  }
+  function personSelect(value, label, onpick) {
+    var sel = el("select", { class: "field", "aria-label": label, title: label },
+      el("option", { value: "", text: "Not assigned" }),
+      people().map(function (n) { return el("option", { value: n, text: n }); }),
+      el("option", { value: "__other", text: "Someone else…" }));
+    sel.value = value || "";
+    sel.addEventListener("change", function () {
+      var v = sel.value;
+      if (v === "__other") {
+        v = (prompt("Who did you work with?") || "").trim().slice(0, 60);
+        if (!v) { sel.value = value || ""; return; }
+      }
+      value = v;
+      onpick(v);
+    });
+    return sel;
+  }
   function ym(d) { return d.getFullYear() + "-" + pad(d.getMonth() + 1); }
   function shiftMonth(month, n) { var p = month.split("-").map(Number); return ym(new Date(p[0], p[1] - 1 + n, 1)); }
   function monthName(month) { var p = month.split("-").map(Number); return new Date(p[0], p[1] - 1, 1).toLocaleDateString(undefined, { month: "long", year: "numeric" }); }
@@ -749,7 +781,7 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap
       state.sb.from("close_done").select("*").limit(50000)
     ]).then(function (res) {
       res.forEach(function (r) { if (r.error) throw r.error; });
-      close.clients = res[0].data.map(function (r) { return { id: r.id, name: r.name, createdAt: Date.parse(r.created_at) || 0 }; });
+      close.clients = res[0].data.map(function (r) { return { id: r.id, name: r.name, createdAt: Date.parse(r.created_at) || 0, withWho: r.worked_with || "" }; });
       close.done = {}; close.plan = {};
       res[1].data.forEach(function (r) {
         var k = doneKey(r.client_id, r.month);
@@ -803,12 +835,17 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap
     closeWrite(function () { return state.sb.from("close_done").upsert({ client_id: c.id, month: month, work_date: date || null }); });
     renderClose();
   }
-  function addClient(name) {
+  function addClient(name, withWho) {
     if (close.clients.some(function (c) { return c.name.toLowerCase() === name.toLowerCase(); })) { toast(name + " is already on the list"); return; }
-    var c = { id: uuid(), name: name, createdAt: Date.now() };
+    var c = { id: uuid(), name: name, createdAt: Date.now(), withWho: withWho || "" };
     close.clients.push(c);
     renderClose();
-    closeWrite(function () { return state.sb.from("close_clients").insert({ id: c.id, name: c.name }); });
+    closeWrite(function () { return state.sb.from("close_clients").insert({ id: c.id, name: c.name, worked_with: c.withWho }); });
+  }
+  function setWorkedWith(c, who) {
+    c.withWho = who;
+    renderClose();
+    closeWrite(function () { return state.sb.from("close_clients").update({ worked_with: who }).eq("id", c.id); });
   }
   function removeClient(c) {
     if (!confirm("Remove " + c.name + "? Its month-end history goes too.")) return;
@@ -820,6 +857,7 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap
 
   function renderClose() {
     $("m-label").textContent = monthName(close.month);
+    renderAddPerson();
     // Open clients first, by planned date (undated after dated), then closed ones.
     var list = close.clients.slice().sort(function (a, b) {
       var ka = doneKey(a.id, close.month), kb = doneKey(b.id, close.month);
@@ -838,30 +876,49 @@ form.add-client { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap
       $("close-list").replaceChildren(el("div", { class: "empty", text: close.loaded ? "Add your clients above. They carry over to every month." : "Loading…" }));
       return;
     }
-    $("close-list").replaceChildren(el("div", { class: "rows" }, list.map(function (c) {
-      var k = doneKey(c.id, close.month), at = close.done[k], when = close.plan[k];
-      var st = el("span", { class: "st" }, el("span", { text: at ? "Closed " + new Date(at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Open" }));
-      if (when && !at) {
-        var d = dayDiff(when);
-        st.append(el("span", { class: "chip due" + (d < 0 ? " late" : d === 0 ? " today" : ""), text: d < 0 ? "Planned " + new Date(when + "T00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " · overdue" : "Work on " + (d === 0 ? "today" : d === 1 ? "tomorrow" : dueLabel(when)) }));
-      }
-      return el("div", { class: "row client" + (at ? " closed" : "") },
-        el("button", { type: "button", class: "tick" + (at ? " on" : ""), "aria-label": (at ? "Mark open: " : "Mark closed: ") + c.name, onclick: function () { toggleClosed(c); } }),
-        el("button", { type: "button", class: "main", onclick: function () { toggleClosed(c); } },
-          el("span", { class: "t", text: c.name }),
-          st),
-        el("div", { class: "row-actions" },
-          el("input", { type: "date", class: "field", value: when || "", title: "Date to work on it", "aria-label": "Date to work on " + c.name,
-            onchange: function (e) { setWorkDate(c, e.target.value); } }),
-          el("button", { type: "button", class: "icon-btn rm", "aria-label": "Remove " + c.name, title: "Remove client", text: "✕", onclick: function () { removeClient(c); } })));
-    })));
+    // Group by who you worked with: the team in the usual order, then others, then unassigned.
+    var order = people().concat([""]);
+    var groups = order.map(function (who) {
+      return { who: who, items: list.filter(function (c) { return (c.withWho || "") === who; }) };
+    }).filter(function (g) { return g.items.length; });
+    $("close-list").replaceChildren.apply($("close-list"), groups.map(function (g) {
+      var closed = g.items.filter(function (c) { return close.done[doneKey(c.id, close.month)]; }).length;
+      return el("section", { class: "group" },
+        el("div", { class: "group-head" }, el("h2", { text: g.who || "Not assigned" }),
+          el("span", { class: "count" }, el("b", { text: String(closed) }), " of " + g.items.length + " closed")),
+        el("div", { class: "rows" }, g.items.map(renderClientRow)));
+    }));
+  }
+  function renderClientRow(c) {
+    var k = doneKey(c.id, close.month), at = close.done[k], when = close.plan[k];
+    var st = el("span", { class: "st" }, el("span", { text: at ? "Closed " + new Date(at).toLocaleDateString(undefined, { month: "short", day: "numeric" }) : "Open" }));
+    if (when && !at) {
+      var d = dayDiff(when);
+      st.append(el("span", { class: "chip due" + (d < 0 ? " late" : d === 0 ? " today" : ""), text: d < 0 ? "Planned " + new Date(when + "T00:00").toLocaleDateString(undefined, { month: "short", day: "numeric" }) + " · overdue" : "Work on " + (d === 0 ? "today" : d === 1 ? "tomorrow" : dueLabel(when)) }));
+    }
+    return el("div", { class: "row client" + (at ? " closed" : "") },
+      el("button", { type: "button", class: "tick" + (at ? " on" : ""), "aria-label": (at ? "Mark open: " : "Mark closed: ") + c.name, onclick: function () { toggleClosed(c); } }),
+      el("button", { type: "button", class: "main", onclick: function () { toggleClosed(c); } },
+        el("span", { class: "t", text: c.name }),
+        st),
+      el("div", { class: "row-actions" },
+        personSelect(c.withWho, "Worked with on " + c.name, function (who) { setWorkedWith(c, who); }),
+        el("input", { type: "date", class: "field", value: when || "", title: "Date to work on it", "aria-label": "Date to work on " + c.name,
+          onchange: function (e) { setWorkDate(c, e.target.value); } }),
+        el("button", { type: "button", class: "icon-btn rm", "aria-label": "Remove " + c.name, title: "Remove client", text: "✕", onclick: function () { removeClient(c); } })));
+  }
+  var addWithWho = "";
+  function renderAddPerson() {
+    var sel = personSelect(addWithWho, "Worked with", function (who) { addWithWho = who; renderAddPerson(); });
+    sel.id = "c-with";
+    $("c-with").replaceWith(sel);
   }
   $("m-prev").addEventListener("click", function () { close.month = shiftMonth(close.month, -1); renderClose(); });
   $("m-next").addEventListener("click", function () { close.month = shiftMonth(close.month, 1); renderClose(); });
   $("add-client").addEventListener("submit", function (e) {
     e.preventDefault();
     var name = $("c-name").value.trim(); if (!name) return;
-    addClient(name); $("c-name").value = ""; $("c-name").focus();
+    addClient(name, addWithWho); $("c-name").value = ""; $("c-name").focus();
   });
 
   function showTab(tab) {
